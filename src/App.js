@@ -551,9 +551,9 @@ export default function EaseHomesLanding() {
               <a href="#listings" style={linkStyle()}>
                 Listings
               </a>
-              <a href="#calculator" style={linkStyle()}>
+              {/* <a href="#calculator" style={linkStyle()}>
                 Calculator
-              </a>
+              </a> */}
               <a href="#faq" style={linkStyle()}>
                 FAQ
               </a>
@@ -779,7 +779,7 @@ export default function EaseHomesLanding() {
         </ol>
       </Section>
 
-      {/* ------------------------------ CALCULATOR ----------------------------- */}
+      {/* ------------------------------ CALCULATOR ----------------------------- 
       <Section
         id="calculator"
         title="Affordability calculator"
@@ -976,6 +976,7 @@ export default function EaseHomesLanding() {
           </div>
         </div>
       </Section>
+      */}
 
       {/* ------------------------------- BENEFITS ------------------------------ */}
       <Section title="Why choose easeHomes?" kicker="Built for real life">
@@ -1127,7 +1128,7 @@ export default function EaseHomesLanding() {
         </div>
       </Section>
 
-      {/* --------------------------- DIAGNOSTICS (TESTS) ---------------------- */}
+      {/* --------------------------- DIAGNOSTICS (TESTS) ---------------------- 
       <Section title="Developer Diagnostics" kicker="Calculator self-tests">
         <div style={S.card}>
           <div style={{ fontSize: 14, color: "#334155" }}>
@@ -1148,6 +1149,7 @@ export default function EaseHomesLanding() {
           </ul>
         </div>
       </Section>
+      */}
 
       {/* --------------------------------- LEAD -------------------------------- */}
       <Section
@@ -1241,7 +1243,7 @@ export default function EaseHomesLanding() {
               about your application.
             </p>
           </form>
-
+          {/*
           <div style={S.card}>
             <div style={{ fontSize: 18, fontWeight: 900, color: BRAND.navy }}>
               Developer & Agent partners
@@ -1253,8 +1255,8 @@ export default function EaseHomesLanding() {
               Become a partner
             </a>
 
-            {/* Partner Logos Grid */}
-            <div
+            {/* Partner Logos Grid 
+             <div
               style={{
                 display: "grid",
                 gap: 10,
@@ -1296,6 +1298,7 @@ export default function EaseHomesLanding() {
               ))}
             </div>
           </div>
+            */}
         </div>
       </Section>
 
