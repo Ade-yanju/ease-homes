@@ -2,25 +2,21 @@
 import React, { useMemo, useState, useEffect } from "react";
 
 /**
- * easeHomes — Homes-first landing (Buy & Rent)
- * React (module build) + Inline CSS only. Single file.
+ * easeHomes — Real Estate Landing (Homes & Shops • Buy or Rent)
+ * Single-file React + inline CSS (no extra deps).
  *
- * Brand: Navy + Orange (from your logo)
- * Scope: Homes only (BUY or RENT)
- * Finance: 30% down, 70% spread across chosen months
- * Extras: Floating CTA, inline SVG social icons, responsive layout, diagnostics/tests
- *
- * This version:
- * - Uses /public/ paths for images (logo + partner logos) so no imports are required.
- * - Renders partner logos with <img loading="lazy"> inside a fixed-aspect container.
- * - Fixes the .map key bug and adds hover polish + error fallback for logos.
+ * Enhancements:
+ * - Real-estate feel: featured listings, price/location badges, hero overlay, image hovers.
+ * - Robust images: <SafeImg> retries multiple sources then falls back to an inline placeholder.
+ * - Logo hardening: tries /logo/Ease.PNG → /logo/Ease.png → /logo/ease.png then hides neatly.
+ * - Shops section now includes an image gallery with real photos.
+ * - Tighter CTA flow and consistent visual rhythm.
  */
 
-/* ----------------------------- Brand & Theme ----------------------------- */
 const BRAND = {
-  primary: "#F36B21", // Orange (CTA)
+  primary: "#F36B21",
   primaryDark: "#D85D1D",
-  navy: "#0C2745", // Deep navy (logo text)
+  navy: "#0C2745",
   ink: "#0c1320",
   text: "#0c1320",
   sub: "#4B5563",
@@ -29,22 +25,14 @@ const BRAND = {
   bg3: "#FFFFFF",
   ring: "#D8E0EC",
   success: "#0EAD69",
-  warn: "#F59E0B",
 };
 
-/** Public assets (place these under /public, see structure below) */
-const LOGO_SRC = "/logo/Ease.png"; // /public/logo/Ease.png
+const LOGO_CANDIDATES = ["/logo/Ease.PNG", "/logo/Ease.png", "/logo/ease.png"];
 
-const PARTNER_LOGOS = [
-  { src: "/partners/Cyconet.png", alt: "Cyconet" },
-  { src: "/partners/omi-health.png", alt: "OMI Health" },
-  { src: "/partners/dulogo.png", alt: "Dominion University" },
-  { src: "/partners/real.png", alt: "Real (Development/Agency)" },
-  { src: "/partners/hillstar1.png", alt: "Hill Star" },
-  { src: "/partners/sm.png", alt: "SmartFarmer" },
-];
+/** inline 1x1 PNG placeholder (very light) */
+const BLANK_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
 
-/* ----------------------------- Base Styles ------------------------------- */
 const CARD = {
   background: "rgba(255,255,255,.96)",
   border: `1px solid ${BRAND.ring}`,
@@ -63,7 +51,7 @@ const S = {
     minHeight: "100vh",
   },
   container: {
-    width: "min(1200px, 92vw)",
+    width: "min(1240px, 92vw)",
     margin: "0 auto",
     padding: "0 16px",
   },
@@ -82,22 +70,22 @@ const S = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 72,
+    minHeight: 76,
     gap: 12,
     flexWrap: "wrap",
   },
   brand: {
     display: "flex",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     textDecoration: "none",
   },
   brandImgBox: {
-    width: 40,
-    height: 40,
+    width: 56,
+    height: 56,
     display: "grid",
     placeItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: "hidden",
     background: "#fff",
     border: `1px solid ${BRAND.ring}`,
@@ -179,14 +167,23 @@ const S = {
   },
 
   /* Hero */
+  heroWrap: { position: "relative", overflow: "hidden" },
   heroGrid: {
     display: "grid",
     gap: 28,
     gridTemplateColumns: "1fr",
     alignItems: "center",
   },
-  heroLeft: { maxWidth: 720 },
+  heroLeft: { maxWidth: 720, position: "relative", zIndex: 1 },
   heroPitch: { marginTop: 10, fontSize: 18, color: "#334155" },
+  heroBackdrop: {
+    position: "absolute",
+    inset: 0,
+    zIndex: 0,
+    opacity: 0.06,
+    background:
+      "radial-gradient(1200px 600px at 70% 20%, #F36B21 0, transparent 60%), radial-gradient(1000px 600px at 20% 0%, #0C2745 0, transparent 50%)",
+  },
   badgeRow: { marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" },
   badge: {
     fontSize: 12,
@@ -215,11 +212,16 @@ const S = {
     minWidth: 240,
   },
 
-  /* Cards & Lists */
+  /* Layout bits */
   grid3: {
     display: "grid",
     gap: 18,
     gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  },
+  grid4: {
+    display: "grid",
+    gap: 16,
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
   },
   card: CARD,
   cardImgWrap: {
@@ -244,13 +246,44 @@ const S = {
   cardTitle: { fontWeight: 900, color: BRAND.navy, fontSize: 18 },
   ul: { marginTop: 8, paddingLeft: 18, color: "#445266", fontSize: 14 },
 
-  /* Steps */
+  /* Listing card extras */
+  ribbon: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    padding: "6px 10px",
+    borderRadius: 10,
+    background: "rgba(12,39,69,.9)",
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: 800,
+  },
+  priceTag: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    padding: "8px 12px",
+    borderRadius: 999,
+    background: "#fff",
+    border: `1px solid ${BRAND.ring}`,
+    fontWeight: 900,
+    fontSize: 13,
+    boxShadow: "0 6px 16px rgba(0,0,0,.12)",
+  },
+  locRow: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+    color: "#5b677a",
+    fontSize: 13,
+    marginTop: 6,
+  },
+
   stepList: {
     display: "grid",
     gap: 16,
     gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
   },
-  step: { position: "relative", ...CARD, padding: 20 },
   stepBubble: {
     position: "absolute",
     top: -12,
@@ -266,23 +299,6 @@ const S = {
     boxShadow: "0 8px 18px rgba(243,107,33,.35)",
   },
 
-  /* Calculator */
-  twoCol: {
-    display: "grid",
-    gap: 18,
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  },
-  listDisc: {
-    paddingLeft: 18,
-    fontSize: 14,
-    color: "#3b4756",
-    lineHeight: 1.6,
-  },
-  calcGrid: {
-    display: "grid",
-    gap: 18,
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-  },
   input: {
     marginTop: 6,
     width: "100%",
@@ -291,60 +307,6 @@ const S = {
     padding: "12px 14px",
     fontSize: 14,
     outline: "none",
-  },
-  statGrid: {
-    display: "grid",
-    gap: 12,
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    marginTop: 12,
-  },
-  stat: {
-    background: "#FFF8F3",
-    border: `1px solid ${BRAND.ring}`,
-    borderRadius: 14,
-    padding: 14,
-  },
-  benefit: {
-    background: "linear-gradient(180deg, #ffffff, #fff8f3)",
-    border: `1px solid ${BRAND.ring}`,
-    borderRadius: 18,
-    padding: 18,
-  },
-  testimonials: {
-    display: "grid",
-    gap: 18,
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-  },
-  quote: { ...CARD, padding: 18 },
-  faqWrap: {
-    border: `1px solid ${BRAND.ring}`,
-    borderRadius: 18,
-    overflow: "hidden",
-  },
-  faqItem: { padding: 18, background: "rgba(255,255,255,.9)" },
-  leadGrid: {
-    display: "grid",
-    gap: 18,
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-  },
-
-  /* Partner logos */
-  partnerCell: {
-    position: "relative",
-    background: "#fff",
-    border: `1px dashed ${BRAND.ring}`,
-    borderRadius: 12,
-    paddingTop: "56%",
-    overflow: "hidden",
-  },
-  partnerImg: {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "contain",
-    padding: 10,
-    transition: "transform .15s ease, box-shadow .15s ease",
   },
 
   /* Footer */
@@ -371,6 +333,16 @@ const S = {
     justifyItems: "end",
   },
   pulse: { animation: "pulse 1.6s ease-in-out infinite" },
+
+  /* scrollers */
+  scroller: {
+    display: "grid",
+    gap: 16,
+    gridAutoFlow: "column",
+    gridAutoColumns: "minmax(260px, 1fr)",
+    overflowX: "auto",
+    paddingBottom: 6,
+  },
 };
 
 /* ------------------------------ Calculator ------------------------------ */
@@ -391,6 +363,42 @@ function useInstallment({ amount, apr, months, downPct }) {
   );
 }
 
+/* ------------------------------ Image helper ---------------------------- */
+function SafeImg({ srcList, alt, style, imgStyle }) {
+  const [idx, setIdx] = useState(0);
+  const src = srcList && srcList[idx] ? srcList[idx] : BLANK_PNG;
+  return (
+    <div style={{ position: "relative", ...style }}>
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          ...imgStyle,
+        }}
+        onError={() => {
+          if (idx < (srcList?.length || 0) - 1) setIdx(idx + 1);
+          else setIdx(-1); // show blank
+        }}
+      />
+      {idx === -1 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background:
+              "repeating-linear-gradient(45deg, #f4f7fb, #f4f7fb 10px, #eef2f7 10px, #eef2f7 20px)",
+          }}
+          aria-hidden
+        />
+      )}
+    </div>
+  );
+}
+
 /* ------------------------------ Small UI bits --------------------------- */
 const Icon = ({ name, size = 18, color = BRAND.navy }) => {
   const common = {
@@ -402,6 +410,13 @@ const Icon = ({ name, size = 18, color = BRAND.navy }) => {
     strokeLinecap: "round",
     strokeLinejoin: "round",
   };
+  if (name === "pin")
+    return (
+      <svg {...common} viewBox="0 0 24 24">
+        <path d="M12 21s-6-5.33-6-10a6 6 0 1 1 12 0c0 4.67-6 10-6 10z" />
+        <circle cx="12" cy="11" r="2.5" />
+      </svg>
+    );
   if (name === "facebook")
     return (
       <svg {...common} viewBox="0 0 24 24">
@@ -432,6 +447,7 @@ const Icon = ({ name, size = 18, color = BRAND.navy }) => {
     );
   return null;
 };
+
 const Kicker = ({ children }) => <div style={S.kicker}>{children}</div>;
 const H2 = ({ children }) => <h2 style={S.h2}>{children}</h2>;
 const Section = ({ id, title, kicker, children }) => (
@@ -444,30 +460,6 @@ const Section = ({ id, title, kicker, children }) => (
   </section>
 );
 
-/* ---------------------------- Diagnostics (tests) ------------------------ */
-function runCalcTests() {
-  const tests = [];
-  let r = computeInstallment(100000, 0, 5, 30);
-  tests.push({
-    name: "APR=0 & 30% down → 70k / 5 = 14k",
-    pass:
-      Math.round(r.monthly) === 14000 &&
-      r.interest === 0 &&
-      Math.round(r.principal) === 70000,
-  });
-  r = computeInstallment(50000000, 24, 12, 30);
-  tests.push({
-    name: "Principal exactly 70% of price",
-    pass: Math.round(r.principal) === 35000000,
-  });
-  r = computeInstallment(-100, 10, 6, 30);
-  tests.push({
-    name: "Negative amount clamps to 0",
-    pass: r.principal === 0 && r.total === 0,
-  });
-  return tests;
-}
-
 /* --------------------------------- Page --------------------------------- */
 export default function EaseHomesLanding() {
   const [mobile, setMobile] = useState(false);
@@ -478,19 +470,18 @@ export default function EaseHomesLanding() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Mode: Buy or Rent
-  const [mode, setMode] = useState("BUY");
+  // Global intent + property type
+  const [intent, setIntent] = useState("BUY"); // BUY or RENT
+  const [propertyType, setPropertyType] = useState("HOUSE"); // HOUSE or SHOP
 
-  // Financing
+  // Financing (used for monthly pill preview)
   const DOWN_PCT = 30;
   const [apr, setApr] = useState(18);
   const [months, setMonths] = useState(12);
-
-  // Inputs
   const [price, setPrice] = useState(35000000);
   const [rent, setRent] = useState(2500000);
 
-  const financedAmount = mode === "BUY" ? price : rent;
+  const financedAmount = intent === "BUY" ? price : rent;
   const calc = useInstallment({
     amount: financedAmount,
     apr,
@@ -501,7 +492,9 @@ export default function EaseHomesLanding() {
   const handleLeadSubmit = (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget));
-    data.mode = mode;
+    // attach chosen intent/propertyType
+    data.intent = intent;
+    data.propertyType = propertyType;
     console.log("Lead submitted:", data);
     alert("Thanks! We'll be in touch within 24 hours.");
     e.currentTarget.reset();
@@ -511,6 +504,21 @@ export default function EaseHomesLanding() {
     ...S.navLink,
     ...(hoverable ? { transition: "color .15s" } : {}),
   });
+
+  const SegButton = ({ active, onClick, children }) => (
+    <button
+      onClick={onClick}
+      style={{
+        ...S.btn,
+        padding: "10px 14px",
+        ...(active ? S.btnPrimary : {}),
+        borderRadius: 999,
+      }}
+    >
+      {children}
+    </button>
+  );
+
   const Btn = ({ primary, children, href = "#lead", onClick }) => (
     <a
       href={href}
@@ -527,37 +535,129 @@ export default function EaseHomesLanding() {
     </a>
   );
 
-  const tests = useMemo(() => runCalcTests(), []);
+  /* Data: featured listings (homes) */
+  const FEATURED = [
+    {
+      title: "2-Bed Apartment • Lekki",
+      price: "₦85,000,000",
+      payNote: "From ₦" + Math.round(calc.monthly).toLocaleString() + "/mo",
+      loc: "Lekki, Lagos",
+      img: [
+        "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop",
+      ],
+      tag: "For " + (intent === "BUY" ? "Sale" : "Rent"),
+    },
+    {
+      title: "4-Bed Duplex • Gwarinpa",
+      price: "₦210,000,000",
+      payNote: "30% down • flexible",
+      loc: "Gwarinpa, Abuja",
+      img: [
+        "https://images.unsplash.com/photo-1597047084897-51e81819a499?q=80&w=1600&auto=format&fit=crop",
+      ],
+      tag: "Prime",
+    },
+    {
+      title: "3-Bed Terrace • Ikate",
+      price: "₦140,000,000",
+      payNote:
+        "From ₦" + Math.round(calc.monthly * 1.6).toLocaleString() + "/mo",
+      loc: "Ikate, Lagos",
+      img: [
+        "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?q=80&w=1600&auto=format&fit=crop",
+      ],
+      tag: "New",
+    },
+    {
+      title: "Family Home • Ibadan",
+      price: "₦95,000,000",
+      payNote: "Early payoff discount",
+      loc: "Jericho, Ibadan",
+      img: [
+        "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1600&auto=format&fit=crop",
+      ],
+      tag: "Hot",
+    },
+  ];
+
+  /* Data: shops gallery */
+  const SHOPS = [
+    {
+      t: "Street-front Boutique",
+      loc: "Yaba, Lagos",
+      img: [
+        "https://images.unsplash.com/photo-1515165562835-c3b8c8b7f79a?q=80&w=1600&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1520916722071-3a1e6a0b87b3?q=80&w=1600&auto=format&fit=crop",
+      ],
+      note: "High visibility • Flexible terms",
+    },
+    {
+      t: "Mall Unit (30sqm)",
+      loc: "Leisure Mall, Surulere",
+      img: [
+        "https://images.unsplash.com/photo-1544211419-6d4b56a3a5d4?q=80&w=1600&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1495020689067-958852a7765e?q=80&w=1600&auto=format&fit=crop",
+      ],
+      note: "Managed utilities • Security",
+    },
+    {
+      t: "Market Stall (Premium Row)",
+      loc: "Wuse Market, Abuja",
+      img: [
+        "https://images.unsplash.com/photo-1506619216599-9d16d0903dfd?q=80&w=1600&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1465815367145-1f1b9f7f1c12?q=80&w=1600&auto=format&fit=crop",
+      ],
+      note: "High footfall • Affordable",
+    },
+    {
+      t: "Corner Store (Double-front)",
+      loc: "Port Harcourt",
+      img: [
+        "https://images.unsplash.com/photo-1456273535766-d1a5ebd97d79?q=80&w=1600&auto=format&fit=crop",
+        "https://images.unsplash.com/photo-1504805572947-34fad45aed93?q=80&w=1600&auto=format&fit=crop",
+      ],
+      note: "Great signage • Parking",
+    },
+  ];
 
   return (
     <div style={S.page}>
       <style>{`@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}`}</style>
 
-      {/* ------------------------------- NAVBAR ------------------------------- */}
+      {/* NAVBAR */}
       <header style={S.headerWrap}>
         <div style={S.container}>
           <div style={S.navBar}>
-            <a href="#top" style={S.brand}>
-              {/* LOGO from /public/logo/Ease.png */}
+            <a href="#top" style={S.brand} aria-label="Ease Homes">
               <div style={S.brandImgBox}>
-                <img src={LOGO_SRC} alt="Ease Homes logo" style={S.brandImg} />
+                <SafeImg
+                  srcList={LOGO_CANDIDATES}
+                  alt="Ease Homes logo"
+                  style={{ width: "100%", height: "100%" }}
+                  imgStyle={{ objectFit: "contain" }}
+                />
               </div>
               <span style={S.brandText}>Ease Homes</span>
             </a>
+
             <nav style={S.navLinks}>
               <a href="#how" style={linkStyle()}>
                 How it works
               </a>
-              <a href="#listings" style={linkStyle()}>
-                Listings
+              <a href="#featured" style={linkStyle()}>
+                Featured
               </a>
-              {/* <a href="#calculator" style={linkStyle()}>
-                Calculator
-              </a> */}
+              <a href="#listings" style={linkStyle()}>
+                Categories
+              </a>
+              <a href="#shops" style={linkStyle()}>
+                Shops renting
+              </a>
               <a href="#faq" style={linkStyle()}>
                 FAQ
               </a>
             </nav>
+
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
               <div style={S.socialRow}>
                 {["facebook", "twitter", "instagram", "linkedin"].map((n) => (
@@ -577,26 +677,75 @@ export default function EaseHomesLanding() {
         </div>
       </header>
 
-      {/* -------------------------------- HERO -------------------------------- */}
-      <div id="top" style={{ padding: mobile ? "48px 0 36px" : "72px 0 54px" }}>
+      {/* HERO */}
+      <div
+        id="top"
+        className="hero"
+        style={{ padding: "72px 0 54px", position: "relative" }}
+      >
+        <div style={S.heroBackdrop} />
         <div style={S.container}>
           <div
             style={{
               ...S.heroGrid,
-              gridTemplateColumns: mobile ? "1fr" : "1.05fr .95fr",
+              gridTemplateColumns:
+                window.innerWidth < 920 ? "1fr" : "1.05fr .95fr",
             }}
           >
             <div style={S.heroLeft}>
-              <div style={S.kicker}>Homes • Buy & Rent</div>
-              <h1 style={{ ...S.h2, fontSize: mobile ? 32 : 42 }}>
-                Own or rent a home with{" "}
-                <span style={{ color: BRAND.primary }}>30% down</span>.
+              <div style={S.kicker}>Homes & Shops • Buy or Rent</div>
+              <h1
+                style={{ ...S.h2, fontSize: window.innerWidth < 920 ? 32 : 44 }}
+              >
+                Get a{" "}
+                <span style={{ color: BRAND.primary }}>
+                  {propertyType === "HOUSE" ? "home" : "shop"}
+                </span>{" "}
+                on your terms.
               </h1>
+
+              {/* Quick controls */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  flexWrap: "wrap",
+                  marginTop: 10,
+                }}
+              >
+                <SegButton
+                  active={intent === "BUY"}
+                  onClick={() => setIntent("BUY")}
+                >
+                  Buy
+                </SegButton>
+                <SegButton
+                  active={intent === "RENT"}
+                  onClick={() => setIntent("RENT")}
+                >
+                  Rent
+                </SegButton>
+                <SegButton
+                  active={propertyType === "HOUSE"}
+                  onClick={() => setPropertyType("HOUSE")}
+                >
+                  House
+                </SegButton>
+                <SegButton
+                  active={propertyType === "SHOP"}
+                  onClick={() => setPropertyType("SHOP")}
+                >
+                  Shop
+                </SegButton>
+              </div>
+
               <p style={S.heroPitch}>
-                Ease Homes makes property accessible: place a 30% down payment
-                and spread the remaining 70% over flexible monthly plans.
-                Transparent pricing, quick approvals, and expert guidance.
+                Place a 30% down payment and spread the remaining 70% over
+                flexible monthly plans. Transparent pricing, quick approvals,
+                and expert guidance for both <b>homes</b> and{" "}
+                <b>retail spaces</b>.
               </p>
+
               <div
                 style={{
                   display: "flex",
@@ -609,13 +758,14 @@ export default function EaseHomesLanding() {
                   Apply in 3 minutes
                 </Btn>
                 <Btn href="#how">How it works</Btn>
-                <Btn href="#listings">Browse listings</Btn>
+                <Btn href="#featured">Featured listings</Btn>
               </div>
+
               <div style={S.badgeRow}>
                 {[
                   "30% down • 70% spread",
                   "3–24 month plans",
-                  "Early payoff discount",
+                  "Homes & Shops",
                 ].map((t) => (
                   <span
                     key={t}
@@ -630,12 +780,27 @@ export default function EaseHomesLanding() {
                 ))}
               </div>
             </div>
+
             <div style={S.heroRight}>
-              {/* TODO[image]: Replace with a premium living room/house exterior */}
-              <img
-                src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?q=80&w=1600&auto=format&fit=crop"
-                alt="Beautiful modern home"
-                style={S.heroImg}
+              <SafeImg
+                srcList={
+                  propertyType === "HOUSE"
+                    ? [
+                        "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?q=80&w=1600&auto=format&fit=crop",
+                        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?q=80&w=1600&auto=format&fit=crop",
+                      ]
+                    : [
+                        "https://images.unsplash.com/photo-1520916722071-3a1e6a0b87b3?q=80&w=1600&auto=format&fit=crop",
+                        "https://images.unsplash.com/photo-1463797221720-6b07e6426c24?q=80&w=1600&auto=format&fit=crop",
+                      ]
+                }
+                alt={
+                  propertyType === "HOUSE"
+                    ? "Beautiful modern home"
+                    : "Modern retail shopfront"
+                }
+                style={{}}
+                imgStyle={S.heroImg}
               />
               <div style={S.floatCard}>
                 <div
@@ -654,7 +819,7 @@ export default function EaseHomesLanding() {
                   ₦{Math.round(calc.monthly).toLocaleString()}
                 </div>
                 <div style={{ ...S.tiny, marginTop: 2 }}>
-                  per month after 30% down
+                  per month after 30% down ({intent.toLowerCase()})
                 </div>
               </div>
             </div>
@@ -662,31 +827,85 @@ export default function EaseHomesLanding() {
         </div>
       </div>
 
-      {/* ------------------------------ HIGHLIGHTS ----------------------------- */}
-      <Section
-        id="listings"
-        title="Popular home types"
-        kicker="Browse by category"
-      >
+      {/* FEATURED LISTINGS (real-estate style cards) */}
+      <Section id="featured" title="Featured listings" kicker="Curated for you">
+        <div style={S.grid4}>
+          {FEATURED.map((L, i) => (
+            <div
+              key={L.title + i}
+              style={S.card}
+              onMouseEnter={(e) => {
+                const img = e.currentTarget.querySelector("img");
+                if (img) img.style.transform = "scale(1.06)";
+                e.currentTarget.style.boxShadow =
+                  "0 14px 40px rgba(16,24,40,.14)";
+              }}
+              onMouseLeave={(e) => {
+                const img = e.currentTarget.querySelector("img");
+                if (img) img.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow =
+                  "0 8px 28px rgba(16,24,40,.08)";
+              }}
+            >
+              <div style={{ ...S.cardImgWrap }}>
+                <div style={S.cardImgInner}>
+                  <SafeImg
+                    srcList={[...L.img]}
+                    alt={L.title}
+                    imgStyle={S.cardImg}
+                  />
+                  <div style={S.ribbon}>{L.tag}</div>
+                  <div style={S.priceTag}>{L.price}</div>
+                </div>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ ...S.cardTitle }}>{L.title}</div>
+                <div style={S.locRow}>
+                  <Icon name="pin" size={16} color="#5b677a" />
+                  <span>{L.loc}</span>
+                </div>
+                <div style={{ marginTop: 8, fontSize: 13, color: "#5b677a" }}>
+                  {L.payNote}
+                </div>
+                <a
+                  href="#lead"
+                  style={{ ...S.btn, ...S.btnGhost, marginTop: 10 }}
+                >
+                  Enquire
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* CATEGORY BROWSE */}
+      <Section id="listings" title="Popular types" kicker="Browse by category">
         <div style={S.grid3}>
           {[
             {
               title: "Starter Apartments",
-              img: "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop",
+              img: [
+                "https://images.unsplash.com/photo-1501183638710-841dd1904471?q=80&w=1600&auto=format&fit=crop",
+              ],
               pts: ["Studios & 1-bed", "Urban convenience", "Quick approvals"],
             },
             {
               title: "Family Homes",
-              img: "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1600&auto=format&fit=crop",
+              img: [
+                "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1600&auto=format&fit=crop",
+              ],
               pts: ["3–4 bedrooms", "Good schools", "Gated estates"],
             },
             {
               title: "Premium & Duplex",
-              img: "https://images.unsplash.com/photo-1597047084897-51e81819a499?q=80&w=1600&auto=format&fit=crop",
+              img: [
+                "https://images.unsplash.com/photo-1597047084897-51e81819a499?q=80&w=1600&auto=format&fit=crop",
+              ],
               pts: [
                 "High-end finishes",
                 "Secure neighborhoods",
-                "Professional management",
+                "Pro management",
               ],
             },
           ].map((c) => (
@@ -706,10 +925,9 @@ export default function EaseHomesLanding() {
                   "0 8px 28px rgba(16,24,40,.08)";
               }}
             >
-              {/* TODO[image]: Replace each card image with your listing shots */}
               <div style={S.cardImgWrap}>
                 <div style={S.cardImgInner}>
-                  <img src={c.img} alt={c.title} style={S.cardImg} />
+                  <SafeImg srcList={c.img} alt={c.title} imgStyle={S.cardImg} />
                 </div>
               </div>
               <div>
@@ -731,8 +949,8 @@ export default function EaseHomesLanding() {
         </div>
       </Section>
 
-      {/* ----------------------------- HOW IT WORKS ---------------------------- */}
-      <Section id="how" title="How it works" kicker="4 steps to your home">
+      {/* HOW IT WORKS */}
+      <Section id="how" title="How it works" kicker="4 steps to your space">
         <ol style={S.stepList}>
           {[
             {
@@ -748,7 +966,7 @@ export default function EaseHomesLanding() {
             {
               n: 3,
               t: "Pay 30% down",
-              d: "Secure your home. We finalize the payment plan for the remaining 70%.",
+              d: "Secure your space. We finalize the plan for the remaining 70%.",
             },
             {
               n: 4,
@@ -779,206 +997,51 @@ export default function EaseHomesLanding() {
         </ol>
       </Section>
 
-      {/* ------------------------------ CALCULATOR ----------------------------- 
-      <Section
-        id="calculator"
-        title="Affordability calculator"
-        kicker="30% down • 70% spread"
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            alignItems: "center",
-            marginBottom: 8,
-          }}
-        >
-          <span style={{ fontWeight: 800, color: BRAND.navy }}>Mode:</span>
-          <button
-            onClick={() => setMode("BUY")}
-            style={{
-              ...S.btn,
-              ...(mode === "BUY" ? S.btnPrimary : {}),
-              padding: "10px 14px",
-            }}
-          >
-            Buy
-          </button>
-          <button
-            onClick={() => setMode("RENT")}
-            style={{
-              ...S.btn,
-              ...(mode === "RENT" ? S.btnPrimary : {}),
-              padding: "10px 14px",
-            }}
-          >
-            Rent
-          </button>
-        </div>
-        <div style={S.calcGrid}>
-          <div style={S.card}>
-            {mode === "BUY" ? (
-              <label
-                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
-              >
-                Home price (₦)
-                <input
-                  type="number"
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
-                  min={10000000}
-                  step={100000}
-                  style={S.input}
-                />
-              </label>
-            ) : (
-              <label
-                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
-              >
-                Annual rent (₦)
-                <input
-                  type="number"
-                  value={rent}
-                  onChange={(e) => setRent(Number(e.target.value))}
-                  min={240000}
-                  step={10000}
-                  style={S.input}
-                />
-              </label>
-            )}
+      {/* SHOPS RENTING — with images */}
+      <Section id="shops" title="Shops renting" kicker="Retail & commercial">
+        <div style={S.grid4}>
+          {SHOPS.map((x, i) => (
             <div
-              style={{
-                display: "grid",
-                gap: 12,
-                gridTemplateColumns: "repeat(2, 1fr)",
-                marginTop: 12,
+              key={x.t + i}
+              style={S.card}
+              onMouseEnter={(e) => {
+                const img = e.currentTarget.querySelector("img");
+                if (img) img.style.transform = "scale(1.06)";
+                e.currentTarget.style.boxShadow =
+                  "0 14px 40px rgba(16,24,40,.14)";
+              }}
+              onMouseLeave={(e) => {
+                const img = e.currentTarget.querySelector("img");
+                if (img) img.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow =
+                  "0 8px 28px rgba(16,24,40,.08)";
               }}
             >
-              <label
-                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
-              >
-                Tenure (months)
-                <input
-                  type="number"
-                  value={months}
-                  onChange={(e) => setMonths(Number(e.target.value))}
-                  min={3}
-                  max={24}
-                  step={1}
-                  style={S.input}
-                />
-              </label>
-              <label
-                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
-              >
-                APR (%/year)
-                <input
-                  type="number"
-                  value={apr}
-                  onChange={(e) => setApr(Number(e.target.value))}
-                  min={0}
-                  max={60}
-                  step={1}
-                  style={S.input}
-                />
-              </label>
-            </div>
-            <div
-              style={{
-                marginTop: 12,
-                fontSize: 13,
-                fontWeight: 800,
-                color: BRAND.navy,
-              }}
-            >
-              Down payment (fixed)
-              <div
-                style={{
-                  marginTop: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <input
-                  value={DOWN_PCT}
-                  readOnly
-                  style={{
-                    ...S.input,
-                    maxWidth: 90,
-                    textAlign: "center",
-                    background: "#FEF5EE",
-                  }}
-                />
-                <span style={S.tiny}>
-                  30% down •{" "}
-                  {mode === "BUY"
-                    ? `₦${Math.round(price * 0.3).toLocaleString()}`
-                    : `₦${Math.round(rent * 0.3).toLocaleString()}`}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div style={S.card}>
-            <div style={{ fontSize: 13, color: BRAND.sub }}>
-              Based on your inputs
-            </div>
-            <div
-              style={{
-                marginTop: 6,
-                fontSize: 30,
-                fontWeight: 900,
-                color: BRAND.navy,
-              }}
-            >
-              ₦{Math.round(calc.monthly).toLocaleString()}{" "}
-              <span style={{ fontSize: 14, fontWeight: 700, color: BRAND.sub }}>
-                per month
-              </span>
-            </div>
-            <div style={S.statGrid}>
-              <div style={S.stat}>
-                <div style={S.tiny}>Principal financed (70%)</div>
-                <div style={{ fontWeight: 900, color: BRAND.navy }}>
-                  ₦{Math.round(calc.principal).toLocaleString()}
+              <div style={S.cardImgWrap}>
+                <div style={S.cardImgInner}>
+                  <SafeImg srcList={x.img} alt={x.t} imgStyle={S.cardImg} />
+                  <div style={S.ribbon}>For Rent</div>
                 </div>
               </div>
-              <div style={S.stat}>
-                <div style={S.tiny}>Total interest</div>
-                <div style={{ fontWeight: 900, color: BRAND.navy }}>
-                  ₦{Math.round(calc.interest).toLocaleString()}
+              <div style={{ marginTop: 10 }}>
+                <div style={{ ...S.cardTitle }}>{x.t}</div>
+                <div style={S.locRow}>
+                  <Icon name="pin" size={16} color="#5b677a" />
+                  <span>{x.loc}</span>
                 </div>
-              </div>
-              <div style={S.stat}>
-                <div style={S.tiny}>Total payable</div>
-                <div style={{ fontWeight: 900, color: BRAND.navy }}>
-                  ₦{Math.round(calc.total).toLocaleString()}
+                <div style={{ marginTop: 8, fontSize: 13, color: "#5b677a" }}>
+                  {x.note}
                 </div>
-              </div>
-              <div style={S.stat}>
-                <div style={S.tiny}>Tenure</div>
-                <div style={{ fontWeight: 900, color: BRAND.navy }}>
-                  {months} months
-                </div>
+                <a href="#lead" style={{ ...S.btn, marginTop: 10 }}>
+                  Check availability
+                </a>
               </div>
             </div>
-            <a
-              href="#lead"
-              style={{ ...S.btn, ...S.btnPrimary, marginTop: 12 }}
-            >
-              Start application
-            </a>
-            <p style={{ ...S.tiny, marginTop: 6 }}>
-              Estimates only. Final figures depend on underwriting.
-            </p>
-          </div>
+          ))}
         </div>
       </Section>
-      */}
 
-      {/* ------------------------------- BENEFITS ------------------------------ */}
+      {/* WHY */}
       <Section title="Why choose easeHomes?" kicker="Built for real life">
         <div style={S.grid3}>
           {[
@@ -1004,10 +1067,10 @@ export default function EaseHomesLanding() {
             },
             {
               t: "Privacy & security",
-              d: "Bank-grade encryption, NDPR compliant handling.",
+              d: "Bank-grade encryption, NDPR-compliant handling.",
             },
           ].map((b) => (
-            <div key={b.t} style={S.benefit}>
+            <div key={b.t} style={{ ...CARD, padding: 18 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: BRAND.navy }}>
                 {b.t}
               </div>
@@ -1019,51 +1082,23 @@ export default function EaseHomesLanding() {
         </div>
       </Section>
 
-      {/* ------------------------------ TESTIMONIALS --------------------------- */}
-      <Section title="What our clients say" kicker="Testimonials">
-        <div style={S.testimonials}>
-          {[
-            {
-              n: "Ada • Lekki",
-              q: "Down payment was the only blocker before. EaseHomes made the rest painless.",
-            },
-            {
-              n: "Kunle • Gwarinpa",
-              q: "Transparent numbers, no hidden fees. We moved into a bigger place.",
-            },
-            {
-              n: "Ife • Port Harcourt",
-              q: "Customer service is excellent—swift responses and clear guidance.",
-            },
-          ].map((t) => (
-            <figure key={t.n} style={S.card}>
-              <blockquote style={{ color: "#334155" }}>“{t.q}”</blockquote>
-              <figcaption
-                style={{
-                  marginTop: 8,
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: BRAND.navy,
-                }}
-              >
-                {t.n}
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      </Section>
-
-      {/* --------------------------------- FAQ -------------------------------- */}
+      {/* FAQ */}
       <Section
         id="faq"
         title="Frequently asked questions"
         kicker="Good to know"
       >
-        <div style={S.faqWrap}>
+        <div
+          style={{
+            border: `1px solid ${BRAND.ring}`,
+            borderRadius: 18,
+            overflow: "hidden",
+          }}
+        >
           {[
             {
-              q: "Do you only finance homes?",
-              a: "Yes. Buy and Rent only—no phones or appliances.",
+              q: "Do you support both homes and shops?",
+              a: "Yes. We finance homes (buy/rent) and retail spaces (shops renting).",
             },
             {
               q: "How much is the down payment?",
@@ -1075,11 +1110,7 @@ export default function EaseHomesLanding() {
             },
             {
               q: "Can I pay off early?",
-              a: "Yes. Early settlement reduces your total interest—ask for a payoff quote any time.",
-            },
-            {
-              q: "What locations do you cover?",
-              a: "Lagos, Abuja, Ibadan and expanding.",
+              a: "Yes. Early settlement reduces your total interest.",
             },
           ].map((f, i) => (
             <details
@@ -1088,7 +1119,8 @@ export default function EaseHomesLanding() {
             >
               <summary
                 style={{
-                  ...S.faqItem,
+                  padding: 18,
+                  background: "rgba(255,255,255,.9)",
                   cursor: "pointer",
                   fontWeight: 800,
                   color: BRAND.navy,
@@ -1128,36 +1160,19 @@ export default function EaseHomesLanding() {
         </div>
       </Section>
 
-      {/* --------------------------- DIAGNOSTICS (TESTS) ---------------------- 
-      <Section title="Developer Diagnostics" kicker="Calculator self-tests">
-        <div style={S.card}>
-          <div style={{ fontSize: 14, color: "#334155" }}>
-            These invariants validate the 30% down • 70% spread calculations.
-          </div>
-          <ul style={{ marginTop: 10, paddingLeft: 18 }}>
-            {tests.map((t, i) => (
-              <li
-                key={i}
-                style={{
-                  color: t.pass ? BRAND.success : "#DC2626",
-                  fontWeight: 700,
-                }}
-              >
-                {t.pass ? "PASS" : "FAIL"} — {t.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Section>
-      */}
-
-      {/* --------------------------------- LEAD -------------------------------- */}
+      {/* LEAD FORM */}
       <Section
         id="lead"
         title="Start your application"
         kicker="Takes ~3 minutes"
       >
-        <div style={S.leadGrid}>
+        <div
+          style={{
+            display: "grid",
+            gap: 18,
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          }}
+        >
           <form onSubmit={handleLeadSubmit} style={S.card}>
             <div
               style={{
@@ -1166,6 +1181,37 @@ export default function EaseHomesLanding() {
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
               }}
             >
+              {/* Property Type & Intent */}
+              <label
+                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
+              >
+                Property Type
+                <select
+                  name="propertyType"
+                  defaultValue={propertyType}
+                  onChange={(e) => setPropertyType(e.target.value)}
+                  style={{ ...S.input, background: "#fff" }}
+                >
+                  <option value="HOUSE">House</option>
+                  <option value="SHOP">Shop</option>
+                </select>
+              </label>
+
+              <label
+                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
+              >
+                Intent
+                <select
+                  name="intent"
+                  defaultValue={intent}
+                  onChange={(e) => setIntent(e.target.value)}
+                  style={{ ...S.input, background: "#fff" }}
+                >
+                  <option value="BUY">Buy</option>
+                  <option value="RENT">Rent</option>
+                </select>
+              </label>
+
               <label
                 style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
               >
@@ -1190,27 +1236,18 @@ export default function EaseHomesLanding() {
                 City
                 <input name="city" style={S.input} />
               </label>
-              <label
-                style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
-              >
-                Mode
-                <input
-                  name="mode"
-                  readOnly
-                  value={mode}
-                  style={{ ...S.input, background: "#FEF5EE" }}
-                />
-              </label>
+
               <label
                 style={{ fontSize: 13, fontWeight: 800, color: BRAND.navy }}
               >
                 Budget (₦)
                 <input
                   name="budget"
-                  placeholder="e.g., 45,000,000"
+                  placeholder="e.g., 45,000,000 or 2,500,000 rent"
                   style={S.input}
                 />
               </label>
+
               <label
                 style={{
                   gridColumn: "1 / -1",
@@ -1226,6 +1263,7 @@ export default function EaseHomesLanding() {
                   style={S.input}
                 />
               </label>
+
               <button
                 type="submit"
                 style={{
@@ -1243,84 +1281,54 @@ export default function EaseHomesLanding() {
               about your application.
             </p>
           </form>
-          {/*
+
           <div style={S.card}>
             <div style={{ fontSize: 18, fontWeight: 900, color: BRAND.navy }}>
-              Developer & Agent partners
+              What to expect
             </div>
-            <p style={{ marginTop: 6, fontSize: 14, color: "#445266" }}>
-              Offer clients a 30% down option and increase conversion.
-            </p>
-            <a href="#" style={{ ...S.btn, marginTop: 10 }}>
-              Become a partner
-            </a>
-
-            {/* Partner Logos Grid 
-             <div
+            <ul
               style={{
-                display: "grid",
-                gap: 10,
-                gridTemplateColumns: "repeat(3,1fr)",
-                marginTop: 12,
+                marginTop: 8,
+                paddingLeft: 18,
+                color: "#445266",
+                fontSize: 14,
+                lineHeight: 1.6,
               }}
             >
-              {PARTNER_LOGOS.map((p, idx) => (
-                <div
-                  key={`${p.alt || "logo"}-${idx}`}
-                  style={S.partnerCell}
-                  onMouseEnter={(e) => {
-                    const img = e.currentTarget.querySelector("img");
-                    if (img) {
-                      img.style.transform = "translateY(-2px)";
-                      e.currentTarget.style.boxShadow =
-                        "0 10px 22px rgba(0,0,0,.08)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    const img = e.currentTarget.querySelector("img");
-                    if (img) {
-                      img.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }
-                  }}
-                >
-                  <img
-                    src={p.src}
-                    alt={p.alt || "Partner logo"}
-                    loading="lazy"
-                    style={S.partnerImg}
-                    onError={(ev) => {
-                      ev.currentTarget.style.opacity = 0.3;
-                      ev.currentTarget.alt = "Logo not available";
-                    }}
-                  />
-                </div>
-              ))}
+              <li>We’ll review your application within 24 hours.</li>
+              <li>
+                You’ll get a shortlist of{" "}
+                {propertyType === "HOUSE" ? "homes" : "shops"} that match your
+                budget.
+              </li>
+              <li>Clear next steps to complete KYC and pay 30% down.</li>
+            </ul>
+            <div style={{ marginTop: 12, ...S.tiny }}>
+              Tip: Include your exact budget and location for faster matching.
             </div>
           </div>
-            */}
         </div>
       </Section>
 
-      {/* -------------------------------- FOOTER ------------------------------- */}
+      {/* FOOTER */}
       <footer style={S.footer}>
         <div style={{ ...S.container, padding: "28px 16px" }}>
           <div style={S.footGrid}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {/* Footer logo */}
                 <div style={S.brandImgBox}>
-                  <img
-                    src={LOGO_SRC}
+                  <SafeImg
+                    srcList={LOGO_CANDIDATES}
                     alt="Ease Homes logo"
-                    style={S.brandImg}
+                    style={{ width: "100%", height: "100%" }}
+                    imgStyle={{ objectFit: "contain" }}
                   />
                 </div>
                 <div style={{ ...S.brandText, fontSize: 20 }}>Ease Homes</div>
               </div>
               <p style={{ marginTop: 8, fontSize: 14, color: "#445266" }}>
-                Homes made accessible: 30% down today, spread the rest over
-                time.
+                Homes & shops made accessible: 30% down today, spread the rest
+                over time.
               </p>
               <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
                 {["facebook", "twitter", "instagram", "linkedin"].map((n) => (
@@ -1330,9 +1338,11 @@ export default function EaseHomesLanding() {
                 ))}
               </div>
             </div>
+
+            {/* Replaced Company & Legal → Shops Renting */}
             <div>
               <div style={{ fontSize: 13, fontWeight: 900, color: BRAND.navy }}>
-                Company
+                Shops Renting
               </div>
               <ul
                 style={{
@@ -1344,25 +1354,26 @@ export default function EaseHomesLanding() {
                 }}
               >
                 <li>
-                  <a href="#" style={linkStyle(false)}>
-                    About
+                  <a href="#shops" style={linkStyle(false)}>
+                    Market stalls
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={linkStyle(false)}>
-                    Careers
+                  <a href="#shops" style={linkStyle(false)}>
+                    Mall units
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={linkStyle(false)}>
-                    Press
+                  <a href="#shops" style={linkStyle(false)}>
+                    Street-front stores
                   </a>
                 </li>
               </ul>
             </div>
+
             <div>
               <div style={{ fontSize: 13, fontWeight: 900, color: BRAND.navy }}>
-                Legal
+                Resources
               </div>
               <ul
                 style={{
@@ -1374,22 +1385,23 @@ export default function EaseHomesLanding() {
                 }}
               >
                 <li>
-                  <a href="#" style={linkStyle(false)}>
-                    Terms
+                  <a href="#how" style={linkStyle(false)}>
+                    How it works
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={linkStyle(false)}>
-                    Privacy
+                  <a href="#faq" style={linkStyle(false)}>
+                    FAQ
                   </a>
                 </li>
                 <li>
-                  <a href="#" style={linkStyle(false)}>
-                    Responsible lending
+                  <a href="#lead" style={linkStyle(false)}>
+                    Get started
                   </a>
                 </li>
               </ul>
             </div>
+
             <div>
               <div style={{ fontSize: 13, fontWeight: 900, color: BRAND.navy }}>
                 Contact
@@ -1409,6 +1421,7 @@ export default function EaseHomesLanding() {
               </ul>
             </div>
           </div>
+
           <div
             style={{
               marginTop: 14,
@@ -1422,7 +1435,7 @@ export default function EaseHomesLanding() {
         </div>
       </footer>
 
-      {/* ---------------------------- FLOATING CTA ---------------------------- */}
+      {/* Floating CTA */}
       <div style={S.floater}>
         <a
           href="#lead"
@@ -1433,7 +1446,7 @@ export default function EaseHomesLanding() {
             padding: "14px 18px",
           }}
         >
-          Get your home →
+          Get your {propertyType === "HOUSE" ? "home" : "shop"} →
         </a>
         <div style={{ display: "flex", gap: 8 }}>
           {["facebook", "twitter", "instagram", "linkedin"].map((n) => (
